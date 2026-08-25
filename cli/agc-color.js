@@ -9,7 +9,16 @@
  * @returns {string}
  */
 function agcColorToCss(color) {
-    if (!color || !color.value) {
+    if (!color) {
+        return "transparent";
+    }
+    if (typeof color === "number") {
+        return packedArgbToCss(color);
+    }
+    if (color.value != null && typeof color.value === "number") {
+        return packedArgbToCss(color.value);
+    }
+    if (!color.value) {
         return "transparent";
     }
     var r = Math.round(color.value.r || 0);
@@ -58,13 +67,40 @@ function gradientToCss(gradient) {
         })
         .join(", ");
     if (gradient.type === "radial") {
-        return "radial-gradient(circle, " + stops + ")";
+        var cx = Math.round((gradient.cx != null ? gradient.cx : 0.5) * 100);
+        var cy = Math.round((gradient.cy != null ? gradient.cy : 0.5) * 100);
+        return "radial-gradient(circle at " + cx + "% " + cy + "%, " + stops + ")";
     }
     var angle = Math.round((gradient.rotation || 0) + 90);
     return "linear-gradient(" + angle + "deg, " + stops + ")";
 }
 
+/**
+ * Packed 0xAARRGGBB (AGC rangedStyle.fill.value).
+ * @param {number} n
+ * @returns {string}
+ */
+function packedArgbToCss(n) {
+    var v = n >>> 0;
+    var a = ((v >>> 24) & 255) / 255;
+    var r = (v >>> 16) & 255;
+    var g = (v >>> 8) & 255;
+    var b = v & 255;
+    a = Math.round(a * 1000) / 1000;
+    if (a >= 0.999) {
+        return (
+            "#" +
+            ((1 << 24) + (r << 16) + (g << 8) + b)
+                .toString(16)
+                .slice(1)
+                .toUpperCase()
+        );
+    }
+    return "rgba(" + r + ", " + g + ", " + b + ", " + a + ")";
+}
+
 module.exports = {
     agcColorToCss: agcColorToCss,
-    agcFillToCss: agcFillToCss
+    agcFillToCss: agcFillToCss,
+    packedArgbToCss: packedArgbToCss
 };

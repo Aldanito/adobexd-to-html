@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Orchestrate CLI export: parse .xd → artboards, assets, CSS.
+ * Orchestrate CLI export: parse .xd → artboards, assets, gold SVG, HTML.
  */
 
 var fs = require("fs");
@@ -13,9 +13,16 @@ var agcColor = require("./agc-color");
 var cssSheet = require("../exporter/css-sheet");
 var documents = require("../exporter/documents");
 var naming = require("../utils/naming");
+var svgScene = require("./svg-scene");
+var planVisible = require("./pipeline/plan-visible").planVisible;
+var boardGroup = require("./board-group");
+var interactions = require("./interactions");
+var hotspots = require("./hotspots");
+var thumbs = require("./thumbs");
+var writeReact = require("../exporter/react/write-react");
 
 /**
- * @param {{input:string, output:string}} options
+ * @param {{input:string, output:string, legacyHtml?:boolean, hideOverlays?:boolean, pagesOnly?:boolean}} options
  * @returns {Promise<{artboardCount:number}>}
  */
 function runExport(options) {
@@ -31,40 +38,111 @@ function runExport(options) {
             dirs.assets,
             usedAssetNames
         );
-        var exported = [];
+        var fontFiles = svgScene.fonts.copyEmbeddedFonts(
+            doc.resourcesDir,
+            path.join(dirs.assets, "fonts")
+        );
 
-        doc.artboards.forEach(function (ab) {
+        var list = doc.artboards || [];
+        if (options.pagesOnly) {
+            list = list.filter(function (ab) {
+                return !boardGroup.isKitBoard(ab.name);
+            });
+        }
+        list.forEach(function (ab) {
+            ab.slug = naming.uniqueSlug(ab.name || ab.id, usedSlugs);
+        });
+        var idToSlug = {};
+        list.forEach(function (ab) {
+            idToSlug[ab.id] = ab.slug;
+        });
+        var hrefById = interactions.nodeHrefs(doc.interactions, idToSlug);
+        var exported = [];
+        var reactBoards = [];
+
+        list.forEach(function (ab) {
             var rootNode = (ab.agc.children && ab.agc.children[0]) || ab.agc;
-            var slug = naming.uniqueSlug(ab.name || ab.id, usedSlugs);
+            var slug = ab.slug;
             var bg =
                 agcColor.agcFillToCss(
                     rootNode.style && rootNode.style.fill
                 ) || "#FFFFFF";
+            var artboard = {
+                x: ab.x,
+                y: ab.y,
+                width: ab.width,
+                height: ab.height
+            };
 
-            var sheet = cssSheet.createCssSheet();
-            var artboardClasses = {};
+            var bodyHtml;
+            var fontCss = "";
+            var sceneSvg = null;
+            if (options.legacyHtml) {
+                var sheet = cssSheet.createCssSheet();
+                var artboardClasses = {};
+                bodyHtml = agcConvert.convertArtboard(rootNode, {
+                    artboard: artboard,
+                    sheet: sheet,
+                    assets: copier,
+                    usedClasses: artboardClasses,
+                    assetCategory: "images",
+                    assetPathKey: "relFromArtboards",
+                    hideOverlays: !!options.hideOverlays,
+                    skipDatePickerGhosts: true
+                });
+                fs.writeFileSync(
+                    path.join(dirs.styles, slug + ".css"),
+                    sheet.toString(),
+                    "utf8"
+                );
+            } else {
+                var skip = new WeakSet();
+                if (options.hideOverlays) {
+                    skip = planVisible(rootNode, {
+                        artboard: artboard,
+                        hideOverlays: true,
+                        skipDatePickerGhosts: false
+                    });
+                }
+                var scene = svgScene.artboardToSvg(rootNode, {
+                    artboard: artboard,
+                    assets: copier,
+                    skipNodes: skip,
+                    assetCategory: "images",
+                    assetPathKey: "relFromArtboards",
+                    background: bg,
+                    fontFiles: fontFiles
+                });
+                bodyHtml = scene.svg;
+                sceneSvg = scene.svg;
+                fontCss = scene.fontCss;
+                fs.writeFileSync(
+                    path.join(dirs.gold, slug + ".svg"),
+                    scene.svg,
+                    "utf8"
+                );
+                fs.writeFileSync(
+                    path.join(dirs.styles, slug + ".css"),
+                    sharedSheet.toString(),
+                    "utf8"
+                );
+                try {
+                    thumbs.writeThumb(
+                        scene.svg,
+                        path.join(dirs.thumbs, slug + ".png"),
+                        dirs.gold,
+                        320
+                    );
+                } catch (e) {
+                    /* skip thumbnail */
+                }
+            }
 
-            var bodyHtml = agcConvert.convertArtboard(rootNode, {
-                artboard: {
-                    x: ab.x,
-                    y: ab.y,
-                    width: ab.width,
-                    height: ab.height
-                },
-                sheet: sheet,
-                assets: copier,
-                usedClasses: artboardClasses,
-                assetCategory: "images",
-                assetPathKey: "relFromArtboards",
-                hideOverlays: false
-            });
-
-            fs.writeFileSync(
-                path.join(dirs.styles, slug + ".css"),
-                sheet.toString(),
-                "utf8"
+            var hotspotsHtml = hotspots.hotspotHtml(
+                rootNode,
+                artboard,
+                hrefById
             );
-
             var html = documents.artboardDocument({
                 title: ab.name,
                 className: slug,
@@ -72,7 +150,9 @@ function runExport(options) {
                 height: ab.height,
                 background: bg,
                 bodyHtml: bodyHtml,
-                stylesheet: slug + ".css"
+                stylesheet: slug + ".css",
+                fontCss: fontCss,
+                hotspotsHtml: hotspotsHtml
             });
 
             fs.writeFileSync(
@@ -80,11 +160,21 @@ function runExport(options) {
                 html,
                 "utf8"
             );
+            reactBoards.push({
+                name: ab.name,
+                slug: slug,
+                width: ab.width,
+                height: ab.height,
+                background: bg,
+                bodyHtml: bodyHtml,
+                hotspotsHtml: hotspotsHtml
+            });
             exported.push({
                 name: ab.name,
                 slug: slug,
                 width: ab.width,
-                height: ab.height
+                height: ab.height,
+                thumb: "assets/thumbs/" + slug + ".png"
             });
         });
 
@@ -103,12 +193,28 @@ function runExport(options) {
             };
         });
 
+        writeReact.writeReactExport(dirs.react, reactBoards);
+
         fs.writeFileSync(
             path.join(outRoot, "index.html"),
             documents.indexDocument({
+                title: doc.name || "XD Export",
                 artboards: exported,
                 assets: assetList
             }),
+            "utf8"
+        );
+
+        fs.writeFileSync(
+            path.join(outRoot, "fidelity.json"),
+            JSON.stringify(
+                {
+                    artboards: exported,
+                    mode: options.legacyHtml ? "legacy-html" : "scenegraph-svg"
+                },
+                null,
+                2
+            ),
             "utf8"
         );
 
@@ -129,9 +235,14 @@ function ensureOutputDirs(outRoot) {
     var assets = path.join(outRoot, "assets");
     var images = path.join(assets, "images");
     var icons = path.join(assets, "icons");
-    [outRoot, artboards, styles, assets, images, icons].forEach(function (d) {
-        fs.mkdirSync(d, { recursive: true });
-    });
+    var thumbsDir = path.join(assets, "thumbs");
+    var gold = path.join(outRoot, "gold");
+    var react = path.join(outRoot, "react");
+    [outRoot, artboards, styles, assets, images, icons, thumbsDir, gold, react].forEach(
+        function (d) {
+            fs.mkdirSync(d, { recursive: true });
+        }
+    );
     [
         path.join(outRoot, "components"),
         path.join(assets, "components")
@@ -145,7 +256,10 @@ function ensureOutputDirs(outRoot) {
         styles: styles,
         assets: assets,
         images: images,
-        icons: icons
+        icons: icons,
+        thumbs: thumbsDir,
+        gold: gold,
+        react: react
     };
 }
 

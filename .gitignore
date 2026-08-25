@@ -1,5 +1,9 @@
 node_modules/
 export-out/
+export-out-*/
+export-wireframe/
+examples/demo/
 .DS_Store
 *.log
 design
+examples/.preview-build

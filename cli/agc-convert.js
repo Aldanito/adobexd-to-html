@@ -27,6 +27,9 @@ var agcWordmark = require("./agc-wordmark");
  * @returns {string}
  */
 function convertArtboard(artboardNode, ctx) {
+    if (ctx.skipDatePickerGhosts === undefined) {
+        ctx.skipDatePickerGhosts = true;
+    }
     ctx.skipNodes = planVisible(artboardNode, ctx);
     var children =
         (artboardNode.artboard && artboardNode.artboard.children) || [];

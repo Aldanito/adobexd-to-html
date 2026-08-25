@@ -19,6 +19,7 @@ var indexDocument = require("./index-document");
 function artboardDocument(opts) {
     var bg = opts.background || "#FFFFFF";
     var cssFile = opts.stylesheet || "export.css";
+    var fontCss = opts.fontCss || "";
     return (
         "<!DOCTYPE html>\n" +
         '<html lang="en">\n' +
@@ -28,12 +29,11 @@ function artboardDocument(opts) {
         "  <title>" +
         htmlUtils.escapeHtml(opts.title) +
         "</title>\n" +
-        '  <link rel="preconnect" href="https://fonts.googleapis.com" />\n' +
-        '  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap" />\n' +
         '  <link rel="stylesheet" href="../styles/' +
         htmlUtils.escapeHtml(cssFile) +
         '" />\n' +
         "  <style>\n" +
+        fontCss +
         "    body {\n" +
         "      --artboard-width: " +
         opts.width +
@@ -55,6 +55,9 @@ function artboardDocument(opts) {
         bg +
         ";\n" +
         "    }\n" +
+        "    .artboard > svg { display: block; width: 100%; height: 100%; }\n" +
+    "    .artboard { position: relative; }\n" +
+    "    .hotspot { position: absolute; z-index: 2; display: block; }\n" +
         "  </style>\n" +
         "</head>\n" +
         '<body class="artboard-page">\n' +
@@ -64,6 +67,7 @@ function artboardDocument(opts) {
         htmlUtils.escapeHtml(opts.title) +
         '">\n' +
         opts.bodyHtml +
+        (opts.hotspotsHtml || "") +
         "\n  </section>\n" +
         "</body>\n" +
         "</html>\n"

@@ -4,26 +4,46 @@
 
 var htmlUtils = require("./html-utils");
 
-/**
- * @param {Array} artboards
- * @returns {string}
- */
-function listArtboards(artboards) {
-    return artboards
-        .map(function (ab) {
+function groupArtboards(artboards, groupFn) {
+    var groups = {};
+    var order = [];
+    artboards.forEach(function (ab) {
+        var g = groupFn ? groupFn(ab.name) : "Screens";
+        if (!groups[g]) {
+            groups[g] = [];
+            order.push(g);
+        }
+        groups[g].push(ab);
+    });
+    return order
+        .map(function (g) {
             return (
-                "    <li><a href=\"artboards/" +
-                htmlUtils.escapeHtml(ab.slug) +
-                '.html">' +
-                htmlUtils.escapeHtml(ab.name) +
-                "</a><span>" +
-                ab.width +
-                " × " +
-                ab.height +
-                "</span></li>"
+                "  <h2>" +
+                htmlUtils.escapeHtml(g) +
+                '</h2>\n  <div class="board-grid">\n' +
+                groups[g].map(cardArtboard).join("\n") +
+                "\n  </div>\n"
             );
         })
-        .join("\n");
+        .join("");
+}
+
+function cardArtboard(ab) {
+    var thumb =
+        ab.thumb || "assets/thumbs/" + ab.slug + ".png";
+    return (
+        '    <a class="card" href="artboards/' +
+        htmlUtils.escapeHtml(ab.slug) +
+        '.html"><img src="' +
+        htmlUtils.escapeHtml(thumb) +
+        '" alt="" /><div class="meta"><strong>' +
+        htmlUtils.escapeHtml(ab.name) +
+        "</strong><span>" +
+        ab.width +
+        " × " +
+        ab.height +
+        "</span></div></a>"
+    );
 }
 
 /**
@@ -69,6 +89,7 @@ function groupAssets(assets) {
 }
 
 module.exports = {
-    listArtboards: listArtboards,
+    listArtboards: groupArtboards,
+    groupArtboards: groupArtboards,
     groupAssets: groupAssets
 };

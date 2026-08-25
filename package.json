@@ -1,24 +1,53 @@
 {
   "name": "xd-to-html",
-  "version": "1.5.5",
-  "description": "CLI proxy: export Adobe XD (.xd) documents to 1:1 HTML/CSS",
+  "version": "1.7.2",
+  "description": "Open Adobe XD .xd files as HTML or React JSX without the XD app",
   "bin": {
     "xd-to-html": "./bin/xd-to-html.js"
   },
   "main": "./cli/index.js",
+  "files": [
+    "bin",
+    "cli",
+    "exporter",
+    "utils",
+    "examples/sample.xd",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "export": "node ./bin/xd-to-html.js",
-    "test:export": "node ./bin/xd-to-html.js \"./design/TLLP TimeSheet and Billing.xd\" -o ./export-out"
+    "sample:xd": "node ./examples/build-sample-xd.js ./examples/sample.xd",
+    "test:export": "node ./bin/xd-to-html.js ./examples/sample.xd -o ./examples/demo",
+    "test:fidelity": "node ./cli/fidelity/run.js ./examples/sample.xd ./examples/demo",
+    "bench": "node ./cli/fidelity/benchmark-run.js",
+    "test": "npm run test:fidelity"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aldanito/adobexd-to-html.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Aldanito/adobexd-to-html/issues"
+  },
+  "homepage": "https://github.com/Aldanito/adobexd-to-html#readme",
   "engines": {
     "node": ">=18"
   },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "pixelmatch": "^5.3.0",
+    "pngjs": "^7.0.0"
+  },
   "keywords": [
     "adobe-xd",
+    "xd",
     "html",
-    "css",
+    "svg",
+    "react",
+    "jsx",
     "cli",
-    "export"
+    "design"
   ],
   "license": "MIT"
 }

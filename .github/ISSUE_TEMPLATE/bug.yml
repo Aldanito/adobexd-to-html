@@ -1,0 +1,21 @@
+name: Bug report
+description: Something looks wrong in the HTML export
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Artboard name, expected vs actual. A screenshot of XD vs HTML helps.
+    validations:
+      required: true
+  - type: input
+    id: xd
+    attributes:
+      label: XD version / file
+      description: Adobe XD version if known. Do not attach confidential .xd files.
+  - type: textarea
+    id: cmd
+    attributes:
+      label: Command
+      value: npx xd-to-html ./file.xd -o ./out

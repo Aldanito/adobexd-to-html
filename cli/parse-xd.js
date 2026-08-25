@@ -8,6 +8,8 @@ var fs = require("fs");
 var path = require("path");
 var os = require("os");
 var { execFileSync } = require("child_process");
+var parseManifest = require("./parse-manifest");
+var interactions = require("./interactions");
 
 /**
  * Extract .xd to a temp dir and return a document handle with cleanup().
@@ -51,6 +53,7 @@ function loadFromExtracted(rootDir, sourcePath) {
         )
     );
     var artboardMeta = resourcesAgc.artboards || {};
+    var fromManifest = parseManifest.manifestArtboards(rootDir);
     var manifestName = path.basename(sourcePath, ".xd");
 
     try {
@@ -64,27 +67,19 @@ function loadFromExtracted(rootDir, sourcePath) {
         /* keep basename */
     }
 
+    var folders = listArtboardFolders(rootDir);
     var artboards = [];
-    Object.keys(artboardMeta).forEach(function (id) {
-        var meta = artboardMeta[id];
-        var agcFull = path.join(
-            rootDir,
-            "artwork",
-            "artboard-" + id,
-            "graphics",
-            "graphicContent.agc"
-        );
-        if (!fs.existsSync(agcFull)) {
-            return;
-        }
+    folders.forEach(function (folder) {
+        var meta = artboardMeta[folder.id] || {};
+        var man = fromManifest[folder.id] || {};
         artboards.push({
-            id: id,
-            name: meta.name || id,
-            width: meta.width || 0,
-            height: meta.height || 0,
-            x: meta.x || 0,
-            y: meta.y || 0,
-            agc: JSON.parse(fs.readFileSync(agcFull, "utf8"))
+            id: folder.id,
+            name: meta.name || man.name || folder.id,
+            width: meta.width || man.width || 0,
+            height: meta.height || man.height || 0,
+            x: meta.x != null ? meta.x : man.x || 0,
+            y: meta.y != null ? meta.y : man.y || 0,
+            agc: JSON.parse(fs.readFileSync(folder.agcFull, "utf8"))
         });
     });
 
@@ -96,8 +91,38 @@ function loadFromExtracted(rootDir, sourcePath) {
     return {
         name: manifestName,
         artboards: artboards,
-        resourcesDir: path.join(rootDir, "resources")
+        resourcesDir: path.join(rootDir, "resources"),
+        interactions: interactions.loadInteractions(rootDir)
     };
+}
+
+/**
+ * Prefer artwork/artboard-* folders (ids can diverge from resources.artboards).
+ * @param {string} rootDir
+ */
+function listArtboardFolders(rootDir) {
+    var artworkDir = path.join(rootDir, "artwork");
+    var folders = [];
+    if (fs.existsSync(artworkDir)) {
+        fs.readdirSync(artworkDir).forEach(function (name) {
+            if (name.indexOf("artboard-") !== 0) {
+                return;
+            }
+            var agcFull = path.join(
+                artworkDir,
+                name,
+                "graphics",
+                "graphicContent.agc"
+            );
+            if (fs.existsSync(agcFull)) {
+                folders.push({
+                    id: name.slice("artboard-".length),
+                    agcFull: agcFull
+                });
+            }
+        });
+    }
+    return folders;
 }
 
 module.exports = {

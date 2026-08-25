@@ -32,13 +32,15 @@ function planVisible(artboardNode, ctx) {
             geometry.artboardPosition,
             agcSize.nodeSize
         );
-        markDatePickerGhosts(
-            children,
-            { x: 0, y: 0 },
-            skip,
-            dateBounds,
-            artboard
-        );
+        if (ctx.skipDatePickerGhosts) {
+            markDatePickerGhosts(
+                children,
+                { x: 0, y: 0 },
+                skip,
+                dateBounds,
+                artboard
+            );
+        }
 
         if (!ctx.hideOverlays) {
             return skip;

@@ -41,6 +41,8 @@ var CANVAS_CSS =
     "  transform: scale(var(--scale, 1));\n" +
     "  margin-bottom: calc((var(--scale, 1) - 1) * var(--artboard-height, 0px));\n" +
     "}\n" +
+    ".artboard > svg { display: block; width: 100%; height: 100%; }\n" +
+    ".artboard svg text, .artboard svg tspan { white-space: pre; }\n" +
     "body {\n" +
     "  --scale: min(1, 100vw / var(--artboard-width, 1440px));\n" +
     "}\n";

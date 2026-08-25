@@ -68,10 +68,12 @@ function pathBounds(d) {
             xs.push(cx);
             ys.push(cy);
         } else if (upper === "A") {
+            var rx = Math.abs(args[0] || 0);
+            var ry = Math.abs(args[1] || 0);
             var ex = rel ? cx + args[5] : args[5];
             var ey = rel ? cy + args[6] : args[6];
-            xs.push(cx, ex);
-            ys.push(cy, ey);
+            xs.push(cx, ex, cx - rx, cx + rx, ex - rx, ex + rx);
+            ys.push(cy, ey, cy - ry, cy + ry, ey - ry, ey + ry);
             cx = ex;
             cy = ey;
         } else {
