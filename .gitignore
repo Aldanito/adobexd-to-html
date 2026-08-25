@@ -1,0 +1,5 @@
+node_modules/
+export-out/
+.DS_Store
+*.log
+design

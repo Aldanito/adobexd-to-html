@@ -1,0 +1,20 @@
+{
+  "manifestVersion": 4,
+  "id": "com.adobe.xd.html-export",
+  "name": "Export to HTML",
+  "version": "1.0.0",
+  "description": "Export Adobe XD artboards to clean, responsive, 1:1 HTML and CSS.",
+  "author": "Adobe XD to HTML",
+  "main": "main.js",
+  "host": {
+    "app": "XD",
+    "minVersion": "36.0.0"
+  },
+  "uiEntryPoints": [
+    {
+      "type": "menu",
+      "label": "Export to HTML",
+      "commandId": "exportToHtml"
+    }
+  ]
+}

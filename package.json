@@ -1,0 +1,24 @@
+{
+  "name": "xd-to-html",
+  "version": "1.5.5",
+  "description": "CLI proxy: export Adobe XD (.xd) documents to 1:1 HTML/CSS",
+  "bin": {
+    "xd-to-html": "./bin/xd-to-html.js"
+  },
+  "main": "./cli/index.js",
+  "scripts": {
+    "export": "node ./bin/xd-to-html.js",
+    "test:export": "node ./bin/xd-to-html.js \"./design/TLLP TimeSheet and Billing.xd\" -o ./export-out"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "adobe-xd",
+    "html",
+    "css",
+    "cli",
+    "export"
+  ],
+  "license": "MIT"
+}
